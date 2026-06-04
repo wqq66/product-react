@@ -1,162 +1,136 @@
-import { useState, useCallback } from "react";
+import { useState } from 'react';
 
+// ===== 第 1 步：定义规则类型 =====
+// 每条规则就是一个条件，比如 "必填"、"最小长度"
 export interface ValidationRule {
-  required?: boolean;
-  minLength?: number;
-  maxLength?: number;
-  pattern?: RegExp;
-  patternMessage?: string;
-  matchField?: string;
-  custom?: (value: string, allValues: Record<string, string>) => string | null;
+  required?: boolean;       // 是否必填
+  minLength?: number;        // 最少几个字符
+  maxLength?: number;        // 最多几个字符
+  pattern?: RegExp;          // 正则匹配（比如邮箱格式）
+  patternMessage?: string;   // 正则不匹配时显示的错误
+  matchField?: string;       // 必须和另一个字段值相同（比如确认密码）
 }
 
-export interface UseFormValidationReturn<T extends Record<string, string>> {
-  values: T;
-  errors: Partial<Record<keyof T, string>>;
-  touched: Partial<Record<keyof T, boolean>>;
-  handleChange: (
-    field: keyof T,
-  ) => (e: React.ChangeEvent<HTMLInputElement>) => void;
-  handleBlur: (field: keyof T) => () => void;
-  handleSubmit: (onValid: (values: T) => void) => () => void;
-  isValid: boolean;
-  reset: () => void;
-}
-
-function validateField<T extends Record<string, string>>(
-  field: keyof T,
+// ===== 第 2 步：检查单个字段是否合法 =====
+// 遍历这个字段的所有规则，返回第一条错误信息
+// 如果都通过了，返回 null（表示没有错误）
+function checkField(
   value: string,
   rules: ValidationRule[],
-  allValues: T,
+  allValues: Record<string, string>,
 ): string | null {
   for (const rule of rules) {
-    if (rule.required && !value.trim()) {
-      return "This field is required";
+    // 必填检查
+    if (rule.required && value.trim() === '') {
+      return 'This field is required';
     }
+    // 最小长度检查
     if (rule.minLength && value.trim().length < rule.minLength) {
       return `Must be at least ${rule.minLength} characters`;
     }
+    // 最大长度检查
     if (rule.maxLength && value.trim().length > rule.maxLength) {
       return `Must be at most ${rule.maxLength} characters`;
     }
+    // 正则格式检查
     if (rule.pattern && !rule.pattern.test(value)) {
-      return rule.patternMessage ?? "Invalid format";
+      return rule.patternMessage ?? 'Invalid format';
     }
+    // 字段匹配检查（确认密码 = 密码）
     if (rule.matchField && value !== allValues[rule.matchField]) {
-      return "Fields do not match";
-    }
-    if (rule.custom) {
-      const error = rule.custom(value, allValues);
-      if (error) return error;
+      return 'Fields do not match';
     }
   }
-  return null;
+  return null; // 全部通过
 }
 
+// ===== 第 3 步：核心 Hook =====
+// 接收"初始值"和"验证规则"，返回表单需要的所有状态和方法
 export function useFormValidation<T extends Record<string, string>>(
   initialValues: T,
   rules: Record<keyof T, ValidationRule[]>,
-): UseFormValidationReturn<T> {
+) {
+  // --- 三个核心状态 ---
+  // React 的 useState 相当于 Vue 的 ref()
   const [values, setValues] = useState<T>(initialValues);
-  const [errors, setErrors] = useState<Partial<Record<keyof T, string>>>({});
-  const [touched, setTouched] = useState<Partial<Record<keyof T, boolean>>>({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
 
-  const handleChange = useCallback(
-    (field: keyof T) => (e: React.ChangeEvent<HTMLInputElement>) => {
-      const newValue = e.target.value;
-      setValues((prev) => {
-        const updated = { ...prev, [field]: newValue };
-        // Clear error for this field as user types
-        setErrors((prevErrors) => {
-          if (!prevErrors[field]) return prevErrors;
-          const next = { ...prevErrors };
-          delete next[field];
-          return next;
-        });
-        return updated;
-      });
-    },
-    [],
-  );
+  // --- 方法 1：输入框内容变化时调用 ---
+  // 做了两件事：①更新值  ②清除该字段的错误
+  function handleChange(field: keyof T) {
+    return function (e: React.ChangeEvent<HTMLInputElement>) {
+      // ① 更新值：用展开运算符创建新对象（React 要求不可变更新）
+      setValues({ ...values, [field]: e.target.value });
 
-  const handleBlur = useCallback(
-    (field: keyof T) => () => {
-      setTouched((prev) => ({ ...prev, [field]: true }));
-      // Validate on blur using the current value
-      setValues((prev) => {
-        const error = validateField(
-          field,
-          prev[field],
-          rules[field] ?? [],
-          prev,
-        );
-        setErrors((prevErrors) => {
-          if (error) {
-            return { ...prevErrors, [field]: error };
-          }
-          const next = { ...prevErrors };
-          delete next[field];
-          return next;
-        });
-        return prev;
-      });
-    },
-    [rules],
-  );
+      // ② 如果这个字段之前有错误，清除它（用户已经开始修改了）
+      if (errors[field as string]) {
+        const newErrors = { ...errors };
+        delete newErrors[field as string];
+        setErrors(newErrors);
+      }
+    };
+  }
 
-  const isValid = Object.keys(errors).length === 0;
+  // --- 方法 2：输入框失去焦点时调用 ---
+  // 做了两件事：①标记为"已触碰"  ②验证当前字段
+  function handleBlur(field: keyof T) {
+    return function () {
+      // ① 标记已触碰（用于控制错误显示的时机）
+      setTouched({ ...touched, [field]: true });
 
-  const handleSubmit = useCallback(
-    (onValid: (values: T) => void) => (e: React.FormEvent) => {
-      e.preventDefault();
+      // ② 验证当前字段
+      const fieldRules = rules[field] ?? [];
+      const error = checkField(values[field], fieldRules, values);
 
-      // Mark all fields as touched
-      const allTouched = Object.keys(rules).reduce(
-        (acc, key) => ({ ...acc, [key]: true }),
-        {} as Record<keyof T, boolean>,
-      );
+      if (error) {
+        setErrors({ ...errors, [field]: error });
+      } else {
+        const newErrors = { ...errors };
+        delete newErrors[field as string];
+        setErrors(newErrors);
+      }
+    };
+  }
+
+  // --- 方法 3：表单提交时调用 ---
+  // 做了三件事：①标记全部字段为已触碰  ②验证全部字段  ③如果通过，执行回调
+  function handleSubmit(onValid: (data: T) => void) {
+    return function (e: React.FormEvent<HTMLFormElement>) {
+      e.preventDefault(); // 阻止浏览器的默认表单提交
+
+      // ① 全部标记为已触碰（让所有错误都显示出来）
+      const allTouched: Record<string, boolean> = {};
+      for (const key of Object.keys(rules)) {
+        allTouched[key] = true;
+      }
       setTouched(allTouched);
 
-      // Validate all fields
-      const newErrors: Partial<Record<keyof T, string>> = {};
-      let hasErrors = false;
-
+      // ② 逐个验证
+      const newErrors: Record<string, string> = {};
       for (const field of Object.keys(rules) as (keyof T)[]) {
-        const error = validateField(
-          field,
-          values[field],
-          rules[field] ?? [],
-          values,
-        );
+        const fieldRules = rules[field] ?? [];
+        const error = checkField(values[field], fieldRules, values);
         if (error) {
-          newErrors[field] = error;
-          hasErrors = true;
+          newErrors[field as string] = error;
         }
       }
-
       setErrors(newErrors);
 
-      if (!hasErrors) {
+      // ③ 没有错误 → 调用回调函数（比如打印日志、发 API 请求）
+      if (Object.keys(newErrors).length === 0) {
         onValid(values);
       }
-    },
-    [rules, values],
-  );
+    };
+  }
 
-  const reset = useCallback(() => {
-    setValues(initialValues);
-    setErrors({});
-    setTouched({});
-  }, [initialValues]);
-
+  // --- 返回给组件使用 ---
   return {
-    values,
-    errors,
-    touched,
-    handleChange,
-    handleBlur,
-    handleSubmit,
-    isValid,
-    reset,
+    values,       // 所有字段的当前值，如 { email: 'a@b.com', password: '123' }
+    errors,       // 所有字段的错误信息，如 { email: '格式不正确' }
+    touched,      // 哪些字段被触碰过，如 { email: true }
+    handleChange, // 绑定到 input 的 onChange
+    handleBlur,   // 绑定到 input 的 onBlur
+    handleSubmit, // 绑定到 form 的 onSubmit
   };
 }
