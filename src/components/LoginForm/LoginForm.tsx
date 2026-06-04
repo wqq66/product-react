@@ -1,57 +1,50 @@
-import { Link } from 'react-router-dom';
-import { useFormValidation } from '../../hooks/useFormValidation';
-import type { ValidationRule } from '../../hooks/useFormValidation';
-import styles from './LoginForm.module.css';
+import { Link } from "react-router-dom";
+import { useFormValidation } from "../../hooks/useFormValidation";
+import type { ValidationRule } from "../../hooks/useFormValidation";
+import styles from "./LoginForm.module.css";
 
 interface LoginValues {
-  email: string;
+  userName: string;
   password: string;
 }
 
 const loginRules: Record<keyof LoginValues, ValidationRule[]> = {
-  email: [
+  userName: [
     { required: true },
     {
-      pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-      patternMessage: 'Please enter a valid email address',
+      patternMessage: "Please enter a valid userName address",
     },
   ],
-  password: [
-    { required: true },
-    { minLength: 6 },
-  ],
+  password: [{ required: true }, { minLength: 6 }],
 };
 
 function LoginForm() {
   const { values, errors, touched, handleChange, handleBlur, handleSubmit } =
-    useFormValidation<LoginValues>(
-      { email: '', password: '' },
-      loginRules,
-    );
+    useFormValidation<LoginValues>({ userName: "", password: "" }, loginRules);
 
   const onValidSubmit = (data: LoginValues) => {
-    console.log('Login submitted:', data);
+    console.log("Login submitted:", data);
     // TODO: Call API for authentication
   };
 
   return (
     <form onSubmit={handleSubmit(onValidSubmit)} noValidate>
       <div className={styles.field}>
-        <label htmlFor="login-email" className={styles.label}>
-          Email
+        <label htmlFor="login-userName" className={styles.label}>
+          userName
         </label>
         <input
-          id="login-email"
-          type="email"
-          className={`${styles.input} ${touched.email && errors.email ? styles.inputError : ''}`}
+          id="login-userName"
+          type="userName"
+          className={`${styles.input} ${touched.userName && errors.userName ? styles.inputError : ""}`}
           placeholder="you@example.com"
-          autoComplete="email"
-          value={values.email}
-          onChange={handleChange('email')}
-          onBlur={handleBlur('email')}
+          autoComplete="userName"
+          value={values.userName}
+          onChange={handleChange("userName")}
+          onBlur={handleBlur("userName")}
         />
-        {touched.email && errors.email && (
-          <p className={styles.error}>{errors.email}</p>
+        {touched.userName && errors.userName && (
+          <p className={styles.error}>{errors.userName}</p>
         )}
       </div>
 
@@ -62,12 +55,12 @@ function LoginForm() {
         <input
           id="login-password"
           type="password"
-          className={`${styles.input} ${touched.password && errors.password ? styles.inputError : ''}`}
+          className={`${styles.input} ${touched.password && errors.password ? styles.inputError : ""}`}
           placeholder="Enter your password"
           autoComplete="current-password"
           value={values.password}
-          onChange={handleChange('password')}
-          onBlur={handleBlur('password')}
+          onChange={handleChange("password")}
+          onBlur={handleBlur("password")}
         />
         {touched.password && errors.password && (
           <p className={styles.error}>{errors.password}</p>
@@ -79,7 +72,7 @@ function LoginForm() {
       </button>
 
       <p className={styles.switchText}>
-        Don't have an account?{' '}
+        Don't have an account?{" "}
         <Link to="/register" className={styles.switchLink}>
           Create one
         </Link>

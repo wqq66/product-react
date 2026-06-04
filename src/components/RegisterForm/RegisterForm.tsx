@@ -1,49 +1,38 @@
-import { Link } from 'react-router-dom';
-import { useFormValidation } from '../../hooks/useFormValidation';
-import type { ValidationRule } from '../../hooks/useFormValidation';
-import styles from './RegisterForm.module.css';
+import { Link } from "react-router-dom";
+import { useFormValidation } from "../../hooks/useFormValidation";
+import type { ValidationRule } from "../../hooks/useFormValidation";
+import styles from "./RegisterForm.module.css";
 
 interface RegisterValues {
   username: string;
-  email: string;
+  userName: string;
   password: string;
   confirmPassword: string;
 }
 
 const registerRules: Record<keyof RegisterValues, ValidationRule[]> = {
-  username: [
-    { required: true },
-    { minLength: 3 },
-    { maxLength: 30 },
-  ],
-  email: [
+  username: [{ required: true }, { minLength: 3 }, { maxLength: 30 }],
+  userName: [
     { required: true },
     {
-      pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-      patternMessage: 'Please enter a valid email address',
+      patternMessage: "Please enter a valid userName",
     },
   ],
-  password: [
-    { required: true },
-    { minLength: 6 },
-  ],
-  confirmPassword: [
-    { required: true },
-    { matchField: 'password' },
-  ],
+  password: [{ required: true }, { minLength: 6 }],
+  confirmPassword: [{ required: true }, { matchField: "password" }],
 };
 
 function RegisterForm() {
   const { values, errors, touched, handleChange, handleBlur, handleSubmit } =
     useFormValidation<RegisterValues>(
-      { username: '', email: '', password: '', confirmPassword: '' },
+      { username: "", userName: "", password: "", confirmPassword: "" },
       registerRules,
     );
 
   const onValidSubmit = (data: RegisterValues) => {
-    console.log('Register submitted:', {
+    console.log("Register submitted:", {
       username: data.username,
-      email: data.email,
+      userName: data.userName,
       password: data.password,
     });
     // TODO: Call API for registration
@@ -58,12 +47,12 @@ function RegisterForm() {
         <input
           id="register-username"
           type="text"
-          className={`${styles.input} ${touched.username && errors.username ? styles.inputError : ''}`}
+          className={`${styles.input} ${touched.username && errors.username ? styles.inputError : ""}`}
           placeholder="Choose a username"
           autoComplete="username"
           value={values.username}
-          onChange={handleChange('username')}
-          onBlur={handleBlur('username')}
+          onChange={handleChange("username")}
+          onBlur={handleBlur("username")}
         />
         {touched.username && errors.username && (
           <p className={styles.error}>{errors.username}</p>
@@ -71,21 +60,21 @@ function RegisterForm() {
       </div>
 
       <div className={styles.field}>
-        <label htmlFor="register-email" className={styles.label}>
-          Email
+        <label htmlFor="register-userName" className={styles.label}>
+          userName
         </label>
         <input
-          id="register-email"
-          type="email"
-          className={`${styles.input} ${touched.email && errors.email ? styles.inputError : ''}`}
+          id="register-userName"
+          type="userName"
+          className={`${styles.input} ${touched.userName && errors.userName ? styles.inputError : ""}`}
           placeholder="you@example.com"
-          autoComplete="email"
-          value={values.email}
-          onChange={handleChange('email')}
-          onBlur={handleBlur('email')}
+          autoComplete="userName"
+          value={values.userName}
+          onChange={handleChange("userName")}
+          onBlur={handleBlur("userName")}
         />
-        {touched.email && errors.email && (
-          <p className={styles.error}>{errors.email}</p>
+        {touched.userName && errors.userName && (
+          <p className={styles.error}>{errors.userName}</p>
         )}
       </div>
 
@@ -96,12 +85,12 @@ function RegisterForm() {
         <input
           id="register-password"
           type="password"
-          className={`${styles.input} ${touched.password && errors.password ? styles.inputError : ''}`}
+          className={`${styles.input} ${touched.password && errors.password ? styles.inputError : ""}`}
           placeholder="Create a password (min. 6 characters)"
           autoComplete="new-password"
           value={values.password}
-          onChange={handleChange('password')}
-          onBlur={handleBlur('password')}
+          onChange={handleChange("password")}
+          onBlur={handleBlur("password")}
         />
         {touched.password && errors.password && (
           <p className={styles.error}>{errors.password}</p>
@@ -115,12 +104,12 @@ function RegisterForm() {
         <input
           id="register-confirm-password"
           type="password"
-          className={`${styles.input} ${touched.confirmPassword && errors.confirmPassword ? styles.inputError : ''}`}
+          className={`${styles.input} ${touched.confirmPassword && errors.confirmPassword ? styles.inputError : ""}`}
           placeholder="Re-enter your password"
           autoComplete="new-password"
           value={values.confirmPassword}
-          onChange={handleChange('confirmPassword')}
-          onBlur={handleBlur('confirmPassword')}
+          onChange={handleChange("confirmPassword")}
+          onBlur={handleBlur("confirmPassword")}
         />
         {touched.confirmPassword && errors.confirmPassword && (
           <p className={styles.error}>{errors.confirmPassword}</p>
@@ -132,7 +121,7 @@ function RegisterForm() {
       </button>
 
       <p className={styles.switchText}>
-        Already have an account?{' '}
+        Already have an account?{" "}
         <Link to="/login" className={styles.switchLink}>
           Sign in
         </Link>
